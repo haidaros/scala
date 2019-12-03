@@ -4,9 +4,9 @@ package scala.tools.nsc.tasty
  */
 object TastyFlags {
 
-  private[this] val maxFlag = 10
+  private[this] val maxFlag = 9
 
-  val EmptyFlags: TastyFlagSet  = TastyFlagSet(0)
+  val EmptyTastyFlags: TastyFlagSet  = TastyFlagSet(0)
   val Erased: TastyFlagSet      = TastyFlagSet(1 << 0)
   val Internal: TastyFlagSet    = TastyFlagSet(1 << 1)
   val Inline: TastyFlagSet      = TastyFlagSet(1 << 2)
@@ -16,8 +16,7 @@ object TastyFlags {
   val Extension: TastyFlagSet   = TastyFlagSet(1 << 6)
   val Given: TastyFlagSet       = TastyFlagSet(1 << 7)
   val Exported: TastyFlagSet    = TastyFlagSet(1 << 8)
-  val NoInits: TastyFlagSet     = TastyFlagSet(1 << 9)
-  val Open: TastyFlagSet        = TastyFlagSet(1 << maxFlag)
+  val NoInits: TastyFlagSet     = TastyFlagSet(1 << maxFlag)
 
   case class TastyFlagSet private[TastyFlags](private val flags: Int) extends AnyVal {
     def toSingletonSets: SingletonSets                        = SingletonSets(flags)
