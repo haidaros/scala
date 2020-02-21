@@ -8,6 +8,11 @@ import scala.tools.nsc.tasty.TastyUniverse
 
 trait ContextOps extends TastyKernel { self: TastyUniverse =>
   import FlagSets._
+  import Contexts._
+
+  @inline
+  final def errorTasty(msg: String)(implicit ctx: Context): Unit =
+    reporter.error(noPosition, s"Scala 2 incompatible TASTy signature of ${ctx.source.name} in ${ctx.owner}: $msg")
 
   object Contexts {
 
@@ -39,7 +44,8 @@ trait ContextOps extends TastyKernel { self: TastyUniverse =>
 
       def requiredPackage(name: TermName): TermSymbol = loadingMirror.getPackage(name.toString)
 
-      final def log(str: => String): Unit = logTasty(s"#[${classRoot}]: $str")
+      final def log(str: => String): Unit =
+        logTasty(str.linesIterator.map(line => s"#[${classRoot}]: $line").mkString(System.lineSeparator))
 
       final def picklerPhase: Phase = symbolTable.picklerPhase
       final def extmethodsPhase: Phase = symbolTable.findPhaseWithName("extmethods")
@@ -61,6 +67,9 @@ trait ContextOps extends TastyKernel { self: TastyUniverse =>
       final lazy val classRoot: Symbol = initialContext.baseClassRoot
 
       def newLocalDummy(owner: Symbol): TermSymbol = owner.newLocalDummy(noPosition)
+
+      def newWildcardSym(info: TypeBounds): Symbol =
+        owner.newTypeParameter(nme.WILDCARD.toTypeName, noPosition, emptyFlags).setInfo(info)
 
       def newSymbol(owner: Symbol, name: Name, flags: FlagSet, completer: TastyLazyType, privateWithin: Symbol = noSymbol): Symbol = {
         val sym = {
@@ -111,7 +120,7 @@ trait ContextOps extends TastyKernel { self: TastyUniverse =>
        *  type of the constructed instance is returned
        */
       def effectiveResultType(sym: Symbol, typeParams: List[Symbol], givenTp: Type): Type =
-        if (sym.name == nme.CONSTRUCTOR) mkTypeRef(sym.owner.toType.prefix, sym.owner, typeParams.map(_.tpe))
+        if (sym.name == nme.CONSTRUCTOR) sym.owner.tpe
         else givenTp
 
       /** The method type corresponding to given parameters and result type */

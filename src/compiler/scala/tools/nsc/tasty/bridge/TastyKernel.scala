@@ -39,6 +39,7 @@ trait TastyKernel { self: TastyUniverse =>
   type TypeRef = symbolTable.TypeRef
   type SingleType = symbolTable.SingleType
   type AnnotatedType = symbolTable.AnnotatedType
+  type TypeBounds = symbolTable.TypeBounds
 
   type ConstantType = symbolTable.ConstantType
   def isConstantType(tpe: Type): Boolean = tpe.isInstanceOf[symbolTable.ConstantType]
@@ -51,14 +52,18 @@ trait TastyKernel { self: TastyUniverse =>
 
   def noPrefix: Type = symbolTable.NoPrefix
 
-  type TypeBounds = symbolTable.TypeBounds
-  def emptyTypeBounds: TypeBounds = symbolTable.TypeBounds.empty
+  object TypeBounds {
+    def unapply(tpe: TypeBounds): Option[(Type, Type)] = symbolTable.TypeBounds.unapply(tpe)
+    def empty: TypeBounds = symbolTable.TypeBounds.empty
+    def upper(hi: Type): TypeBounds = symbolTable.TypeBounds.upper(hi)
+    def lower(lo: Type): TypeBounds = symbolTable.TypeBounds.lower(lo)
+    def bounded(lo: Type, hi: Type): TypeBounds = symbolTable.TypeBounds.apply(lo, hi)
+  }
 
   def cloneSymbolsAtOwner(syms: List[Symbol], owner: Symbol): List[Symbol] =
     symbolTable.cloneSymbolsAtOwner(syms,owner)
 
   def defineOriginalOwner(sym: Symbol, owner: Symbol): Unit = symbolTable.defineOriginalOwner(sym, owner)
-
 
   object GenPolyType {
     def apply(tparams: List[Symbol], tpe: Type): Type = symbolTable.GenPolyType.apply(tparams,tpe)
@@ -69,15 +74,14 @@ trait TastyKernel { self: TastyUniverse =>
 
   def mkSingleType(pre: Type, sym: Symbol): Type = symbolTable.singleType(pre, sym)
   def mkNullaryMethodType(res: Type): NullaryMethodType = symbolTable.internal.nullaryMethodType(res)
-  def mkMethodType(params: List[Symbol], res: Type): MethodType = symbolTable.internal.methodType(params, res)
-  def mkPolyType(params: List[Symbol], res: Type): PolyType = symbolTable.internal.polyType(params, res)
-  def mkTypeRef(tpe: Type, sym: Symbol, args: List[Type]): Type = symbolTable.typeRef(tpe, sym, args)
-  def mkExistentialType(params: List[Symbol], res: Type): ExistentialType = symbolTable.internal.existentialType(params, res)
+  private[bridge] def mkMethodType(params: List[Symbol], res: Type): MethodType = symbolTable.internal.methodType(params, res)
+  private[bridge] def mkPolyType(params: List[Symbol], res: Type): PolyType = symbolTable.internal.polyType(params, res)
+  private[bridge] def mkTypeRef(tpe: Type, sym: Symbol, args: List[Type]): Type = symbolTable.typeRef(tpe, sym, args)
+  private[bridge] def mkAppliedType(sym: Symbol, args: List[Type]): Type = symbolTable.appliedType(sym, args)
+  private[bridge] def mkAppliedType(tycon: Type, args: List[Type]): Type = symbolTable.appliedType(tycon, args)
+  private[bridge] def mkExistentialType(params: List[Symbol], res: Type): ExistentialType = symbolTable.internal.existentialType(params, res)
   def mkClassInfoType(parents: List[Type], decls: Scope, sym: Symbol): ClassInfoType = symbolTable.internal.classInfoType(parents, decls, sym)
-  def mkAppliedType(tycon: Type, args: Type*): Type = symbolTable.appliedType(tycon, args:_*)
-  def mkAppliedType(tyconsym: Symbol, args: Type*): Type = symbolTable.appliedType(tyconsym, args:_*)
   def mkThisType(sym: Symbol): Type = symbolTable.internal.thisType(sym)
-  def mkTypeBounds(lo: Type, hi: Type): TypeBounds = symbolTable.internal.typeBounds(lo, hi)
   def mkConstantType(c: Constant): ConstantType = symbolTable.internal.constantType(c)
   def mkIntersectionType(tps: Type*): Type = mkIntersectionType(tps.toList)
   def mkIntersectionType(tps: List[Type]): Type = symbolTable.internal.intersectionType(tps)
@@ -88,9 +92,11 @@ trait TastyKernel { self: TastyUniverse =>
 
   object defn {
     def byNameType(arg: Type): Type = symbolTable.definitions.byNameType(arg)
+    final val AnyTpe: Type = symbolTable.definitions.AnyTpe
     final val NothingTpe: Type = symbolTable.definitions.NothingTpe
     final val AnyRefTpe: Type = symbolTable.definitions.AnyRefTpe
     final val UnitTpe: Type = symbolTable.definitions.UnitTpe
+    final val CompileTimeOnlyAttr: Symbol = symbolTable.definitions.CompileTimeOnlyAttr
     final val ByNameParamClass: ClassSymbol = symbolTable.definitions.ByNameParamClass
     final val ObjectClass: ClassSymbol = symbolTable.definitions.ObjectClass
     final val AnyValClass: ClassSymbol = symbolTable.definitions.AnyValClass
@@ -101,9 +107,6 @@ trait TastyKernel { self: TastyUniverse =>
     def childAnnotationClass(implicit ctx: Contexts.Context): Option[Symbol] =
       ctx.loadingMirror.getClassIfDefined("scala.annotation.internal.Child").toOption
     def arrayType(arg: Type): Type = symbolTable.definitions.arrayType(arg)
-    // final val BooleanTpe: Type = symbolTable.definitions.BooleanTpe
-    // def optionType(value: Type) = symbolTable.definitions.optionType(value)
-    // def tupleType(values: List[Type]) = symbolTable.definitions.tupleType(values)
   }
 
   object nme {
@@ -115,6 +118,7 @@ trait TastyKernel { self: TastyUniverse =>
     final val ROOT: TermName = symbolTable.nme.ROOT
     final val ROOTPKG: TermName = symbolTable.nme.ROOTPKG
     final val EMPTY_PACKAGE_NAME: TermName = symbolTable.nme.EMPTY_PACKAGE_NAME
+    final val WILDCARD: TermName = symbolTable.nme.WILDCARD
     def freshWhileName: TermName = symbolTable.freshTermName(symbolTable.nme.WHILE_PREFIX)(symbolTable.currentFreshNameCreator)
   }
 
@@ -126,6 +130,7 @@ trait TastyKernel { self: TastyUniverse =>
   private[bridge] type FlagAgnosticCompleter = symbolTable.FlagAgnosticCompleter
 
   def noSymbol: Symbol = symbolTable.NoSymbol
+  // def isSymbol(sym: Symbol) = sym `ne` symbolTable.NoSymbol
 
   type Scope = symbolTable.Scope
   def emptyScope: Scope = symbolTable.EmptyScope
@@ -268,8 +273,6 @@ trait TastyKernel { self: TastyUniverse =>
   def mkScope: Scope = symbolTable.newScope
 
   def enteringPhase[T](phase: Phase)(op: => T): T = symbolTable.enteringPhase[T](phase)(op)
-
-  def mkNewFreeTypeSymbol(name: TypeName, flags: FlagSet, origin: String): FreeTypeSymbol = symbolTable.newFreeTypeSymbol(name, flags, origin)
 
   def mirrorThatLoaded(sym: Symbol): Mirror = symbolTable.mirrorThatLoaded(sym)
 
