@@ -242,8 +242,9 @@ trait ScalaSettings extends StandardScalaSettings with Warnings {
   val Ymacroexpand    = ChoiceSetting     ("-Ymacro-expand", "policy", "Control expansion of macros, useful for scaladoc and presentation compiler.", List(MacroExpand.Normal, MacroExpand.None, MacroExpand.Discard), MacroExpand.Normal)
   val YmacroFresh     = BooleanSetting    ("-Ymacro-global-fresh-names", "Should fresh names in macros be unique across all compilation units")
   val YmacroAnnotations = BooleanSetting  ("-Ymacro-annotations", "Enable support for macro annotations, formerly in macro paradise.")
+  val YtastyNoAnnotations = BooleanSetting("-Ytasty-no-annotations", "Disable support for reading annotations from TASTy, this will prevent safety features such as pattern match exhaustivity and exhaustion analysis.")
   val Yreplclassbased = BooleanSetting    ("-Yrepl-class-based", "Use classes to wrap REPL snippets instead of objects")
-  val YreplMagicImport = BooleanSetting    ("-Yrepl-use-magic-imports", "In the code the wraps REPL snippes, use magic imports to rather than nesting wrapper object/classes")
+  val YreplMagicImport = BooleanSetting   ("-Yrepl-use-magic-imports", "In the code the wraps REPL snippes, use magic imports to rather than nesting wrapper object/classes")
   val Yreploutdir     = StringSetting     ("-Yrepl-outdir", "path", "Write repl-generated classfiles to given output directory (use \"\" to generate a temporary dir)" , "")
   @deprecated("Unused setting will be removed", since="2.13")
   val Yreplsync       = new BooleanSetting    ("-Yrepl-sync", "Legacy setting for sbt compatibility, unused.").internalOnly()
@@ -434,7 +435,7 @@ trait ScalaSettings extends StandardScalaSettings with Warnings {
   val Vhelp              = BooleanSetting("-V", "Print a synopsis of verbose options.")
   val browse          = PhasesSetting("-Vbrowse", "Browse the abstract syntax tree after") withAbbreviation "-Ybrowse"
   val debug           = BooleanSetting("-Vdebug", "Increase the quantity of debugging output.") withAbbreviation "-Ydebug"
-  val debugTasty      = BooleanSetting("-Vdebug-tasty", "Increase the quantity of debugging output when unpickling tasty.") withAbbreviation "-Ydebug-tasty"
+  val YdebugTasty      = BooleanSetting("-Vdebug-tasty", "Increase the quantity of debugging output when unpickling tasty.") withAbbreviation "-Ydebug-tasty"
   val Ydocdebug          = BooleanSetting("-Vdoc", "Trace scaladoc activity.") withAbbreviation "-Ydoc-debug"
   val Yidedebug          = BooleanSetting("-Vide", "Generate, validate and output trees using the interactive compiler.") withAbbreviation "-Yide-debug"
   val Yissuedebug        = BooleanSetting("-Vissue", "Print stack traces when a context issues an error.") withAbbreviation "-Yissue-debug"
