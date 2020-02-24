@@ -68,7 +68,7 @@ trait FlagOps extends TastyKernel { self: TastyUniverse =>
   def show(flags: FlagSet): String = symbolTable.show(flags)
 
   def show(flags: TastyFlagSet): String =
-    if (!flags) "EmptyFlags"
+    if (!flags) "EmptyTastyFlags"
     else flags.toSingletonSets.map { f =>
       (f: @unchecked) match {
         case Erased      => "erased"
@@ -83,6 +83,7 @@ trait FlagOps extends TastyKernel { self: TastyUniverse =>
         case NoInits     => "<noinits>"
         case TastyMacro  => "<tastymacro>"
         case Enum        => "enum"
+        case Open        => "open"
       }
     } mkString(" | ")
 }

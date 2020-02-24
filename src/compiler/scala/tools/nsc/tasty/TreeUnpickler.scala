@@ -145,10 +145,10 @@ class TreeUnpickler[Tasty <: TastyUniverse](
     def skipTree(): Unit = skipTree(readByte())
 
     def skipParams(): Unit =
-      while (nextByte === PARAMS || nextByte === TYPEPARAM) skipTree()
-
-    def skipTemplateParams(): Unit =
-      while (nextByte === PARAM || nextByte === TYPEPARAM) skipTree()
+      while ({
+        val tag = nextByte
+        tag == PARAM || tag == TYPEPARAM || tag == PARAMEND
+      }) skipTree()
 
     def skipTypeParams(): Unit =
       while (nextByte === TYPEPARAM) skipTree()
@@ -708,6 +708,7 @@ class TreeUnpickler[Tasty <: TastyUniverse](
           case GIVEN => addFlag(Implicit) //addTastyFlag(Given)
           case PARAMsetter => addFlag(ParamAccessor)
           case EXPORTED => addTastyFlag(Exported)
+          case OPEN => addTastyFlag(Open)
           case PRIVATEqualified =>
             readByte()
             privateWithin = readWithin(ctx)
@@ -833,12 +834,13 @@ class TreeUnpickler[Tasty <: TastyUniverse](
 
       val completer = sym.completer
 
-      def readParamss(implicit ctx: Context): List[List[NoCycle/*ValDef*/]] =
-        collectWhile(nextByte === PARAMS) {
-          readByte()
-          readEnd()
-          readParams(PARAM)
-        }
+      def readParamss(implicit ctx: Context): List[List[NoCycle/*ValDef*/]] = nextByte match {
+        case PARAM | PARAMEND =>
+          readParams[NoCycle](PARAM) ::
+            (if (nextByte == PARAMEND) { readByte(); readParamss } else Nil)
+
+        case _ => Nil
+      }
 
       val localCtx = localContext(sym)
       val noCycle  = tag match {
@@ -991,12 +993,13 @@ class TreeUnpickler[Tasty <: TastyUniverse](
 //      val tag = readByte()
 //      val end = readEnd()
 //
-//     def readParamss(implicit ctx: Context): List[List[ValDef]] =
-//       collectWhile(nextByte === PARAMS) {
-//         readByte()
-//         readEnd()
-//         readParams(PARAM)
-//       }
+//     def readParamss(implicit ctx: Context): List[List[ValDef]] =nextByte match {
+//        case PARAM | PARAMEND =>
+//          readParams[ValDef](PARAM) ::
+//            (if (nextByte == PARAMEND) { readByte(); readParamss } else Nil)
+//
+//        case _ => Nil
+//      }
 //
 //      val localCtx = localContext(sym)
 //
@@ -1135,9 +1138,9 @@ class TreeUnpickler[Tasty <: TastyUniverse](
 //          untpd.ValDef(readName(), readTpt(), EmptyTree).withType(NoType)
 //        }
 //        else EmptyValDef
+//      cls.setNoInitsFlags(parentsKind(parents), bodyFlags)
 //      cls.info = ClassInfo(cls.owner.thisType, cls, parentTypes, cls.unforcedDecls,
 //        if (self.isEmpty) NoType else self.tpt.tpe)
-//      cls.setNoInitsFlags(parentsKind(parents), bodyFlags)
 //      val constr = readIndexedDef().asInstanceOf[DefDef]
 //      val mappedParents = parents.map(_.changeOwner(localDummy, constr.symbol))
 //
@@ -1191,13 +1194,13 @@ class TreeUnpickler[Tasty <: TastyUniverse](
 //      assert(sourcePathAt(start).isEmpty)
 //      readByte()
 //      readEnd()
-//      val importGiven = nextByte === GIVEN
+//      val importGiven = nextByte === GIVEN // TODO: drop the next time we bump Tasty versions
 //      if (importGiven) readByte()
 //      val expr = readTerm()
-//      setSpan(start, Import(importGiven, expr, readSelectors()))
+//      setSpan(start, Import(expr, expr, readSelectors()))
 //    }
 
-//    def readSelectors()(implicit ctx: Context): List[untpd.Tree] = nextByte match {
+//    def readSelectors()(implicit ctx: Context): List[untpd.Tree] = nextByte match { // TODO fetch latest
 //      case IMPORTED =>
 //        val start = currentAddr
 //        assert(sourcePathAt(start).isEmpty)
@@ -1233,8 +1236,13 @@ class TreeUnpickler[Tasty <: TastyUniverse](
       collectWhile(nextByte === tag) { readIndexedMember().asInstanceOf[T] }
 
     def readParams[T <: MaybeCycle /*MemberDef*/](tag: Int)(implicit ctx: Context): List[T] = {
-      fork.indexParams(tag)
-      readIndexedParams(tag)
+      if (nextByte == tag) {
+        fork.indexParams(tag)
+        readIndexedParams(tag)
+      }
+      else {
+        Nil
+      }
     }
 
     def completeSelection[T](name: TastyName, sig: Signature[Type], isTerm: Boolean)(f: (Context, Name, (Context, Name, Type) => Type) => T)(implicit ctx: Context): T = {

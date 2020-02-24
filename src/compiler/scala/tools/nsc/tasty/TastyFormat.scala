@@ -9,7 +9,7 @@ this file adapted from https://github.com/lampepfl/dotty/blob/master/compiler/sr
 object TastyFormat {
 
   final val header: Array[Int] = Array(0x5C, 0xA1, 0xAB, 0x1F)
-  val MajorVersion: Int = 17
+  val MajorVersion: Int = 18
   val MinorVersion: Int = 0
 
   /** Tags used to serialize names */
@@ -107,6 +107,8 @@ object TastyFormat {
   final val GIVEN = 37
   final val PARAMsetter = 38
   final val EXPORTED = 39
+  final val OPEN = 40
+  final val PARAMEND = 41
 
   // Cat. 2:    tag Nat
 
@@ -167,8 +169,8 @@ object TastyFormat {
   final val TYPEDEF = 131
   final val IMPORT = 132
   final val TYPEPARAM = 133
-  final val PARAMS = 134
-  final val PARAM = 135
+  final val PARAM = 134
+  // ? = 135
   final val APPLY = 136
   final val TYPEAPPLY = 137
   final val TYPED = 138
@@ -235,7 +237,7 @@ object TastyFormat {
 
   /** Useful for debugging */
   def isLegalTag(tag: Int): Boolean =
-    firstSimpleTreeTag <= tag && tag <= EXPORTED ||
+    firstSimpleTreeTag <= tag && tag <= PARAMEND ||
     firstNatTreeTag <= tag && tag <= RENAMED ||
     firstASTTreeTag <= tag && tag <= BOUNDED ||
     firstNatASTTreeTag <= tag && tag <= NAMEDARG ||
@@ -279,6 +281,7 @@ object TastyFormat {
        | EXTENSION
        | PARAMsetter
        | EXPORTED
+       | OPEN
        | ANNOTATION
        | PRIVATEqualified
        | PROTECTEDqualified => true
@@ -339,6 +342,8 @@ object TastyFormat {
     case GIVEN => "GIVEN"
     case PARAMsetter => "PARAMsetter"
     case EXPORTED => "EXPORTED"
+    case OPEN => "OPEN"
+    case PARAMEND => "PARAMEND"
 
     case SHAREDterm => "SHAREDterm"
     case SHAREDtype => "SHAREDtype"
@@ -372,7 +377,6 @@ object TastyFormat {
     case TYPEDEF => "TYPEDEF"
     case IMPORT => "IMPORT"
     case TYPEPARAM => "TYPEPARAM"
-    case PARAMS => "PARAMS"
     case PARAM => "PARAM"
     case IMPORTED => "IMPORTED"
     case RENAMED => "RENAMED"
