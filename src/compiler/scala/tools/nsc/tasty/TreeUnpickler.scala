@@ -340,14 +340,17 @@ class TreeUnpickler[Tasty <: TastyUniverse](
             //     case symd: SymDenotation if prefix.isArgPrefixOf(symd.symbol) => TypeRef(prefix, symd.symbol)
             //     case _ => TypeRef(prefix, name, space.decl(name).asSeenFrom(prefix))
             //   }
-            // case REFINEDtype =>
-            //   var name: Name = readName()
-            //   val parent = readType()
-            //   val ttag = nextUnsharedTag
-            //   if (ttag === TYPEBOUNDS || ttag === TYPEALIAS) name = name.toTypeName
-            //   RefinedType(parent, name, readType())
-            //     // Note that the lambda "rt => ..." is not equivalent to a wildcard closure!
-            //     // Eta expansion of the latter puts readType() out of the expression.
+             case REFINEDtype =>
+               val tastyName = readTastyName()
+               var name: Name = tastyName.toEncodedTermName
+               val parent = readType()
+               val ttag = nextUnsharedTag
+               if (ttag === TYPEBOUNDS || ttag === TYPEALIAS) name = name.toTypeName
+               val refinedType = readType()
+                 // Note that the lambda "rt => ..." is not equivalent to a wildcard closure!
+                 // Eta expansion of the latter puts readType() out of the expression.
+               println(s"$parent , $name , $refinedType")
+               mkRefinedType(List(parent), ctx.owner, emptyScope, ctx.owner.pos)
             case APPLIEDtype =>
               boundedAppliedType(readType(), until(end)(readType()))
             case TYPEBOUNDS =>

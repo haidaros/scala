@@ -88,7 +88,10 @@ trait TastyKernel { self: TastyUniverse =>
   def mkIntersectionType(tps: Type*): Type = mkIntersectionType(tps.toList)
   def mkIntersectionType(tps: List[Type]): Type = symbolTable.internal.intersectionType(tps)
   def mkAnnotatedType(tpe: Type, annot: Annotation): AnnotatedType = symbolTable.AnnotatedType(annot :: Nil, tpe)
-
+  def mkRefinedType(parents: List[Type], owner: Symbol, decls: Scope, pos: Position): Type = {
+    symbolTable.refinedType(parents, owner, decls, pos)
+  }
+  type Position = symbolTable.Position
   def extensionMethInfo(currentOwner: Symbol, extensionMeth: Symbol, origInfo: Type, clazz: Symbol): Type =
     symbolTable.extensionMethInfo(currentOwner, extensionMeth, origInfo, clazz)
 
